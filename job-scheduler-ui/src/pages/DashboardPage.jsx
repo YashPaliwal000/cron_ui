@@ -63,9 +63,12 @@ const DashboardPage = () => {
       width: 170,
       valueFormatter: (params) => {
         if (!params) return "";
-        // Multiply by 1000 if it's Unix seconds
-        const date = new Date(params * 1000);
-        return date.toLocaleString();
+        try {
+          const date = new Date(params);
+          return isNaN(date.getTime()) ? "Invalid Date" : date.toLocaleString();
+        } catch (e) {
+          return "Invalid Date";
+        }
       }
     },
     { field: 'lastStatus', headerName: 'Last Status', width: 120 },

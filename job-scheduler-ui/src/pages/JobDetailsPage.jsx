@@ -136,11 +136,38 @@ const JobDetailsPage = () => {
                 />
               </Grid>
               
+              <Grid item xs={5}><Typography color="text.secondary">Type</Typography></Grid>
+              <Grid item xs={7}>
+                <Chip 
+                  label={job.scheduleType || (job.cronExpression || job.scheduleConfig ? 'RECURRING' : 'ONE_TIME')} 
+                  color={(job.scheduleType || (job.cronExpression || job.scheduleConfig ? 'RECURRING' : 'ONE_TIME')) === 'RECURRING' ? "secondary" : "info"} 
+                  size="small" 
+                  variant="outlined"
+                />
+              </Grid>
+
+              <Grid item xs={5}><Typography color="text.secondary">Time Zone</Typography></Grid>
+              <Grid item xs={7}><Typography>{job.timeZone || 'System Default'}</Typography></Grid>
+
+              {job.scheduleType === 'RECURRING' && (
+                <>
+                  <Grid item xs={5}><Typography color="text.secondary">Cron Expression</Typography></Grid>
+                  <Grid item xs={7}>
+                    <Typography sx={{ fontFamily: 'monospace' }}>
+                      {job.cronExpression || 'N/A'}
+                    </Typography>
+                  </Grid>
+                </>
+              )}
+              
+              <Grid item xs={5}><Typography color="text.secondary">Schedule/Start Time</Typography></Grid>
+              <Grid item xs={7}><Typography>{job.scheduleTime ? new Date(job.scheduleTime).toLocaleString() : 'N/A'}</Typography></Grid>
+
               <Grid item xs={5}><Typography color="text.secondary">Next Run</Typography></Grid>
-              <Grid item xs={7}><Typography>{job.nextRun ? new Date(job.nextRun * 1000).toLocaleString() : (job.scheduleTime || 'N/A')}</Typography></Grid>
+              <Grid item xs={7}><Typography>{job.nextRun ? new Date(job.nextRun).toLocaleString() : (job.scheduleTime ? new Date(job.scheduleTime).toLocaleString() : 'N/A')}</Typography></Grid>
               
               <Grid item xs={5}><Typography color="text.secondary">Last Run</Typography></Grid>
-              <Grid item xs={7}><Typography>{job.lastRunTime ? new Date(job.lastRunTime * 1000).toLocaleString() : 'N/A'}</Typography></Grid>
+              <Grid item xs={7}><Typography>{job.lastRunTime ? new Date(job.lastRunTime).toLocaleString() : 'N/A'}</Typography></Grid>
               
               <Grid item xs={5}><Typography color="text.secondary">Last Result</Typography></Grid>
               <Grid item xs={7}>
@@ -153,7 +180,7 @@ const JobDetailsPage = () => {
               </Grid>
               
               <Grid item xs={5}><Typography color="text.secondary">Created At</Typography></Grid>
-              <Grid item xs={7}><Typography>{job.createdAt ? new Date(job.createdAt * 1000).toLocaleString() : 'N/A'}</Typography></Grid>
+              <Grid item xs={7}><Typography>{job.createdAt ? new Date(job.createdAt).toLocaleString() : 'N/A'}</Typography></Grid>
             </Grid>
           </Paper>
         </Grid>

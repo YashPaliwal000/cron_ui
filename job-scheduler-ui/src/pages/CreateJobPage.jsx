@@ -19,6 +19,16 @@ const CreateJobPage = () => {
     headers: "",
     payload: "",
     scheduleTime: "",
+    scheduleType: "ONE_TIME",
+    timeZone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    cronExpression: "",
+    scheduleConfig: {
+      frequency: "DAILY",
+      times: ["09:00"],
+      daysOfWeek: [],
+      daysOfMonth: [],
+      interval: ""
+    }
   });
 
   const handleChange = (e) => {
@@ -29,14 +39,57 @@ const CreateJobPage = () => {
     }));
   };
 
+  const handleConfigChange = (e) => {
+    const { name, value } = e.target;
+    setFormData((prev) => ({
+      ...prev,
+      scheduleConfig: {
+        ...prev.scheduleConfig,
+        [name]: value
+      }
+    }));
+  };
+
+  const handleTimesChange = (e) => {
+    const timeArray = e.target.value.split(',').map(t => t.trim());
+    setFormData((prev) => ({
+      ...prev,
+      scheduleConfig: {
+        ...prev.scheduleConfig,
+        times: timeArray
+      }
+    }));
+  };
+
   const handleSubmit = async (e) => {
     e.preventDefault();
     try {
-      if (!formData.name || !formData.endpoint || !formData.scheduleTime) {
-        showAlert("Name, Endpoint and Schedule Time are required", "warning");
+      if (!formData.name || !formData.endpoint) {
+        showAlert("Name and Endpoint are required", "warning");
         return;
       }
-      await jobService.createJob(formData);
+      if (formData.scheduleType === 'ONE_TIME' && !formData.scheduleTime) {
+        showAlert("Schedule Time is required for ONE_TIME jobs", "warning");
+        return;
+      }
+      if (formData.scheduleType === "RECURRING" && !formData.cronExpression && !formData.scheduleConfig.frequency) {
+        showAlert("Either Cron Expression or Schedule Configuration is required for RECURRING jobs", "warning");
+        return;
+      }
+
+      const payload = { ...formData };
+      if (!payload.scheduleTime) {
+        payload.scheduleTime = null;
+      }
+      if (payload.scheduleType === 'ONE_TIME') {
+        payload.cronExpression = null;
+        payload.scheduleConfig = null;
+      } else if (payload.cronExpression) {
+         // if cron is provided, it takes precedence
+         payload.scheduleConfig = null;
+      }
+      
+      await jobService.createJob(payload);
       showAlert("Job created successfully", "success");
       navigate("/jobs");
     } catch (error) {
@@ -143,20 +196,146 @@ const CreateJobPage = () => {
               <Divider sx={{ mb: 2 }} />
             </Grid>
 
-            <Grid item xs={12} sm={6}>
+            <Grid item xs={12} sm={4}>
               <TextField
+                select
                 required
+                fullWidth
+                label="Schedule Type"
+                name="scheduleType"
+                value={formData.scheduleType}
+                onChange={handleChange}
+              >
+                <MenuItem value="ONE_TIME">One Time</MenuItem>
+                <MenuItem value="RECURRING">Recurring</MenuItem>
+              </TextField>
+            </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <TextField
+                required={formData.scheduleType === 'ONE_TIME'}
                 fullWidth
                 label="Schedule Time"
                 type="datetime-local"
                 name="scheduleTime"
                 value={formData.scheduleTime}
                 onChange={handleChange}
+                helperText={formData.scheduleType === 'RECURRING' ? "Optional start time" : ""}
                 InputLabelProps={{
                   shrink: true,
                 }}
               />
             </Grid>
+
+            <Grid item xs={12} sm={4}>
+              <TextField
+                required
+                fullWidth
+                label="Time Zone"
+                name="timeZone"
+                value={formData.timeZone}
+                onChange={handleChange}
+              />
+            </Grid>
+
+            {formData.scheduleType === 'RECURRING' && (
+              <>
+                <Grid item xs={12}>
+                  <Typography variant="subtitle1" gutterBottom>Schedule Builder</Typography>
+                </Grid>
+                
+                <Grid item xs={12} sm={4}>
+                  <TextField
+                    select
+                    fullWidth
+                    label="Frequency"
+                    name="frequency"
+                    value={formData.scheduleConfig.frequency}
+                    onChange={handleConfigChange}
+                  >
+                    <MenuItem value="DAILY">Daily</MenuItem>
+                    <MenuItem value="WEEKLY">Weekly</MenuItem>
+                    <MenuItem value="MONTHLY">Monthly</MenuItem>
+                    <MenuItem value="HOURLY">Hourly (Interval)</MenuItem>
+                  </TextField>
+                </Grid>
+
+                <Grid item xs={12} sm={8}>
+                  <TextField
+                    fullWidth
+                    label="Times (comma separated HH:MM)"
+                    name="times"
+                    value={formData.scheduleConfig.times.join(', ')}
+                    onChange={handleTimesChange}
+                    placeholder="e.g. 09:00, 13:00"
+                    helperText="Required for Daily/Weekly/Monthly"
+                  />
+                </Grid>
+
+                {formData.scheduleConfig.frequency === 'WEEKLY' && (
+                  <Grid item xs={12}>
+                    <TextField
+                      select
+                      fullWidth
+                      SelectProps={{ multiple: true }}
+                      label="Days of Week"
+                      name="daysOfWeek"
+                      value={formData.scheduleConfig.daysOfWeek}
+                      onChange={handleConfigChange}
+                    >
+                      {['SUN', 'MON', 'TUE', 'WED', 'THU', 'FRI', 'SAT'].map(day => (
+                        <MenuItem key={day} value={day}>{day}</MenuItem>
+                      ))}
+                    </TextField>
+                  </Grid>
+                )}
+
+                {formData.scheduleConfig.frequency === 'MONTHLY' && (
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      label="Days of Month (comma separated)"
+                      name="daysOfMonth"
+                      value={formData.scheduleConfig.daysOfMonth.join(',')}
+                      onChange={(e) => {
+                         const arr = e.target.value.split(',').map(v => parseInt(v.trim())).filter(v => !isNaN(v));
+                         handleConfigChange({ target: { name: 'daysOfMonth', value: arr } });
+                      }}
+                      placeholder="e.g. 1, 15"
+                    />
+                  </Grid>
+                )}
+                
+                {formData.scheduleConfig.frequency === 'HOURLY' && (
+                  <Grid item xs={12}>
+                    <TextField
+                      fullWidth
+                      type="number"
+                      label="Interval (Hours)"
+                      name="interval"
+                      value={formData.scheduleConfig.interval}
+                      onChange={handleConfigChange}
+                    />
+                  </Grid>
+                )}
+
+                <Grid item xs={12}>
+                  <Typography variant="subtitle2" align="center" sx={{ my: 1 }}>OR</Typography>
+                </Grid>
+
+                <Grid item xs={12}>
+                  <TextField
+                    fullWidth
+                    label="Custom Cron Expression (Overrides builder)"
+                    name="cronExpression"
+                    value={formData.cronExpression}
+                    onChange={handleChange}
+                    placeholder="0 0 9 * * ?"
+                    helperText="Leave empty to use the Schedule Builder above"
+                  />
+                </Grid>
+              </>
+            )}
 
             <Grid item xs={12} sx={{ display: 'flex', justifyContent: 'flex-end', mt: 3 }}>
               <Button 

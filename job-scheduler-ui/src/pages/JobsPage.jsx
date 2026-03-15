@@ -62,13 +62,34 @@ const JobsPage = () => {
       )
     },
     { 
+      field: 'scheduleType', 
+      headerName: 'Type', 
+      width: 120,
+      renderCell: (params) => {
+        // Fallback for older jobs that might not have scheduleType but have a cron Expression
+        const type = params.value || (params.row.cronExpression || params.row.scheduleConfig ? 'RECURRING' : 'ONE_TIME');
+        return (
+          <Chip 
+            label={type} 
+            color={type === 'RECURRING' ? "secondary" : "info"} 
+            size="small" 
+            variant="outlined" 
+          />
+        );
+      }
+    },
+    { 
       field: 'nextRun', 
       headerName: 'Next Run', 
       width: 170,
       valueFormatter: (params) => {
         if (!params) return "";
-        const date = new Date(params * 1000);
-        return date.toLocaleString();
+        try {
+          const date = new Date(params);
+          return isNaN(date.getTime()) ? "Invalid Date" : date.toLocaleString();
+        } catch (e) {
+          return "Invalid Date";
+        }
       }
     },
     {
